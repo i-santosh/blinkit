@@ -13,6 +13,13 @@ export function Navbar() {
   const { userProfile, setUserProfile } = useUserProfileStore();
   const navigate = useNavigate();
   const [dropdownOpen, setDropdownOpen] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
+
+  const handleSearch = (event: React.KeyboardEvent<HTMLInputElement>) => {
+    if (event.key === 'Enter' && searchQuery.trim()) {
+      navigate(`/products?search=${searchQuery.trim()}`);
+    }
+  };
 
   // Function to fetch and set user profile data
   const getAndSetProfileData = async () => {
@@ -80,6 +87,9 @@ export function Navbar() {
               type="text"
               placeholder="Search for products"
               className="w-full py-2.5 pl-10 pr-4 border border-gray-300 rounded-lg focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary shadow-sm"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              onKeyDown={handleSearch}
             />
           </div>
           
@@ -183,6 +193,9 @@ export function Navbar() {
             type="text"
             placeholder="Search for products"
             className="w-full py-2.5 pl-10 pr-4 border border-gray-300 rounded-lg focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary shadow-sm"
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            onKeyDown={handleSearch}
           />
         </div>
       </div>

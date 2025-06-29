@@ -69,8 +69,17 @@ export default function SignIn() {
     emailNotVerified?: boolean;
     fields?: { email: string };
   }>();
-  const [isSubmitting, setIsSubmitting] = useState(false);
+  // Tracks manual loading state for the sign-in button
+const [isSubmitting, setIsSubmitting] = useState(false);
   const navigate = useNavigate();
+  
+  // Reset the submitting state whenever we receive a response back from the action
+  React.useEffect(() => {
+    if (isSubmitting && actionData) {
+      // We have received a response (success or error) – stop showing the loading state
+      setIsSubmitting(false);
+    }
+  }, [actionData, isSubmitting]);
   
   // Store tokens in cookies when we get a successful response
   React.useEffect(() => {

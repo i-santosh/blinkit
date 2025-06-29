@@ -100,6 +100,10 @@ export interface Order {
   total_price: number;
   status: string;
   items: OrderItemResponse[];
+  shipping_address?: string;
+  payment_id?: string;
+  formatted_status?: string;
+  payment_method?: string;
 }
 
 export interface OrderResponse {
@@ -248,19 +252,58 @@ export const productsAPI = {
 
 // Orders API
 export const ordersAPI = {
-  createOrder: async (orderItems: OrderItem[]) => {
-    const response = await apiClient.post<ApiResponse<OrderResponse>>('/orders/place/', { orderItem: orderItems });
-    return response.data;
+  createOrder: async (orderData: { 
+    orderItem: { product_id: number; quantity: number }[], 
+    payment_method: string,
+    shipping_address?: string 
+  }) => {
+    try {
+      const response = await apiClient.post('/orders/place/', orderData);
+      return response.data;
+    } catch (error: any) {
+      console.error('Error creating order:', error.response?.data || error.message);
+      return error.response?.data || { success: false, message: 'An unknown error occurred' };
+    }
   },
 
+  verifyPayment: async (paymentData: { razorpay_order_id: string; razorpay_payment_id: string; razorpay_signature: string; }) => {
+    try {
+      const response = await apiClient.post('/orders/verify-payment/', paymentData);
+      return response.data;
+    } catch (error: any) {
+      console.error('Error verifying payment:', error.response?.data || error.message);
+      return error.response?.data || { success: false, message: 'An unknown error occurred' };
+    }
+  },
+  
   getOrders: async () => {
-    const response = await apiClient.get<ApiResponse<Order[]>>('/orders/');
-    return response.data;
+    try {
+      const response = await apiClient.get('/orders/my-orders/');
+      return response.data;
+    } catch (error: any) {
+      console.error('Error fetching orders:', error.response?.data || error.message);
+      return error.response?.data || { success: false, message: 'An unknown error occurred' };
+    }
+  },
+  
+  getOrderDetails: async (orderId: string) => {
+    try {
+      const response = await apiClient.get(`/orders/order/${orderId}/`);
+      return response.data;
+    } catch (error: any) {
+      console.error('Error fetching order details:', error.response?.data || error.message);
+      return error.response?.data || { success: false, message: 'An unknown error occurred' };
+    }
   },
 
-  getOrder: async (orderId: number) => {
-    const response = await apiClient.get<ApiResponse<Order>>(`/orders/${orderId}/`);
-    return response.data;
+  cancelOrder: async (orderId: string) => {
+    try {
+      const response = await apiClient.post(`/orders/order/${orderId}/cancel/`);
+      return response.data;
+    } catch (error: any) {
+      console.error('Error cancelling order:', error.response?.data || error.message);
+      return error.response?.data || { success: false, message: 'An unknown error occurred' };
+    }
   },
 };
 
@@ -270,4 +313,61 @@ export const contactAPI = {
     const response = await apiClient.post<ApiResponse<ContactData>>('/contact/', data);
     return response.data;
   },
-}; 
+};
+
+// Delivery Areas API
+export const deliveryAreasAPI = {
+  getActiveAreas: async () => {
+    try {
+      const response = await apiClient.get('/addresses/delivery-areas/active_areas/');
+      return response.data;
+    } catch (error: any) {
+      console.error('Error fetching active delivery areas:', error.response?.data || error.message);
+      return error.response?.data || { success: false, message: 'An unknown error occurred' };
+    }
+  },
+
+  createDeliveryArea: async (areaData: {
+    city: string;
+    state: string;
+    pin_code: string;
+    is_active?: boolean;
+    delivery_charges?: number;
+    estimated_delivery_days?: number;
+  }) => {
+    try {
+      const response = await apiClient.post('/addresses/delivery-areas/', areaData);
+      return response.data;
+    } catch (error: any) {
+      console.error('Error creating delivery area:', error.response?.data || error.message);
+      return error.response?.data || { success: false, message: 'An unknown error occurred' };
+    }
+  },
+
+  updateDeliveryArea: async (areaId: number, areaData: {
+    city?: string;
+    state?: string;
+    pin_code?: string;
+    is_active?: boolean;
+    delivery_charges?: number;
+    estimated_delivery_days?: number;
+  }) => {
+    try {
+      const response = await apiClient.patch(`/addresses/delivery-areas/${areaId}/`, areaData);
+      return response.data;
+    } catch (error: any) {
+      console.error('Error updating delivery area:', error.response?.data || error.message);
+      return error.response?.data || { success: false, message: 'An unknown error occurred' };
+    }
+  },
+
+  deleteDeliveryArea: async (areaId: number) => {
+    try {
+      const response = await apiClient.delete(`/addresses/delivery-areas/${areaId}/`);
+      return response.data;
+    } catch (error: any) {
+      console.error('Error deleting delivery area:', error.response?.data || error.message);
+      return error.response?.data || { success: false, message: 'An unknown error occurred' };
+    }
+  }
+};

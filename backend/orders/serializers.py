@@ -9,16 +9,21 @@ class OrderItemCreateSerializer(serializers.Serializer):
 
 class OrderCreateSerializer(serializers.Serializer):
     orderItem = OrderItemCreateSerializer(many=True)
+    payment_method = serializers.CharField(required=True)
+    shipping_address = serializers.CharField(required=False, allow_blank=True)
 
     def create(self, validated_data):
         user = self.context['request'].user
         order_items_data = validated_data.pop('orderItem')
+        shipping_address = validated_data.pop('shipping_address', None)
+        payment_method = validated_data.pop('payment_method', 'COD')
 
         # Create order with zero total initially
         order = Order.objects.create(
             user=user,
             total_price=0,
-            status='PENDING'
+            status='PENDING',
+            shipping_address=shipping_address
         )
 
         total_price = 0
@@ -65,12 +70,40 @@ class OrderItemSerializer(serializers.ModelSerializer):
 class OrderSerializer(serializers.ModelSerializer):
     items = OrderItemSerializer(source='orderitem_set', many=True, read_only=True)
     
+    # Add more descriptive fields
+    payment_method = serializers.SerializerMethodField()
+    formatted_status = serializers.SerializerMethodField()
+    refund_details = serializers.SerializerMethodField()
+    
+    def get_payment_method(self, obj):
+        # Determine payment method based on available information
+        if obj.payment_id:
+            return 'Online Payment'
+        return 'Cash on Delivery (COD)'
+    
+    def get_formatted_status(self, obj):
+        # Capitalize and format the status
+        return obj.status.capitalize()
+    
+    def get_refund_details(self, obj):
+        # Only include refund details if the order is cancelled
+        if obj.status == 'CANCELLED' and obj.payment_id:
+            # This is a placeholder. In a real-world scenario, 
+            # you might want to fetch actual refund details from Razorpay
+            return {
+                'refund_id': obj.payment_id,  # Temporary placeholder
+                'status': 'processed'  # Temporary placeholder
+            }
+        return None
+    
     class Meta:
         model = Order
         fields = [
             'id', 'user', 'total_price', 'created_at', 
-            'updated_at', 'status', 'items', 'get_items_count',
-            'shipping_address', 'payment_id', 'razorpay_order_id'
+            'updated_at', 'status', 'formatted_status', 'items', 
+            'get_items_count', 'shipping_address', 
+            'payment_id', 'payment_method', 
+            'razorpay_order_id', 'refund_details'
         ]
         read_only_fields = ['total_price', 'created_at', 'updated_at', 'razorpay_order_id']
 

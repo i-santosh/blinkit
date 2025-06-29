@@ -15,6 +15,7 @@ urlpatterns = [
         path('products/', include('products.urls')),
         path('orders/', include('orders.urls')),
         path('contact/', include('contact.urls')),
+        path('addresses/', include('addresses.urls')),
 
         # # Razorpay Webhook Handler
         # path('razorpay/webhooks/', razorpay_webhook, name='razorpay-webhook'),

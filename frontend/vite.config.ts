@@ -10,6 +10,15 @@ declare module "@remix-run/node" {
 
 
 export default defineConfig({
+  base: "/",
+  build: {
+    manifest: true,
+    rollupOptions: {
+      output: {
+        manualChunks: undefined,
+      },
+    },
+  },
   plugins: [
     remix({
       future: {

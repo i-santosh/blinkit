@@ -68,6 +68,7 @@ INSTALLED_APPS = [
     'products',
     'orders',
     'contact',
+    'addresses',
 ]
 
 MIDDLEWARE = [
@@ -323,17 +324,39 @@ JAZZMIN_SETTINGS = {
     "navigation_expanded": True,
     # Custom icons for side menu apps/models
     "icons": {
+        # Authentication and User Management
         "auth": "fas fa-users-cog",
         "auth.user": "fas fa-user",
         "auth.Group": "fas fa-users",
+        
+        # Custom User Model
         "accounts.CUser": "fas fa-user-circle",
+        
+        # Products
         "products.Product": "fas fa-box",
+        "products.Category": "fas fa-tags",
+        "products.Brand": "fas fa-trademark",
+        
+        # Orders
         "orders.Order": "fas fa-shopping-cart",
+        "orders.OrderItem": "fas fa-receipt",
+        
+        # Addresses
+        "addresses.DeliveryArea": "fas fa-map-marker-alt",
+        
+        # Notifications
         "notifications.Notification": "fas fa-bell",
+        
+        # Contact
+        "contact.ContactSubmission": "fas fa-envelope",
+        
+        # Additional common icons
+        "sites.Site": "fas fa-globe",
+        "admin.LogEntry": "fas fa-history"
     },
     # Icons that are used when one is not manually specified
-    "default_icon_parents": "fas fa-chevron-circle-right",
-    "default_icon_children": "fas fa-circle",
+    "default_icon_parents": "fas fa-folder",
+    "default_icon_children": "fas fa-file",
     #############
     # UI Tweaks #
     #############

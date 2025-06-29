@@ -23,7 +23,7 @@ export default function OrderDetail() {
 
       try {
         setIsLoading(true);
-        const response = await ordersAPI.getOrder(orderId);
+        const response = await ordersAPI.getOrderDetails(orderId.toString());
         
         if (response.success) {
           setOrder(response.data);
@@ -65,17 +65,17 @@ export default function OrderDetail() {
   const getStatusBadgeClass = (status: string) => {
     switch (status.toLowerCase()) {
       case 'pending':
-        return 'bg-yellow-100 text-yellow-800 border-yellow-200';
+        return 'bg-yellow-200 text-yellow-900 border-yellow-300';
       case 'processing':
-        return 'bg-blue-100 text-blue-800 border-blue-200';
+        return 'bg-blue-200 text-blue-900 border-blue-300';
       case 'shipped':
-        return 'bg-indigo-100 text-indigo-800 border-indigo-200';
+        return 'bg-indigo-200 text-indigo-900 border-indigo-300';
       case 'delivered':
-        return 'bg-green-100 text-green-800 border-green-200';
+        return 'bg-green-200 text-green-900 border-green-300';
       case 'cancelled':
-        return 'bg-red-100 text-red-800 border-red-200';
+        return 'bg-red-200 text-red-900 border-red-300';
       default:
-        return 'bg-gray-100 text-gray-800 border-gray-200';
+        return 'bg-gray-200 text-gray-900 border-gray-300';
     }
   };
 
@@ -87,7 +87,7 @@ export default function OrderDetail() {
             <div className="flex items-center">
               <button 
                 onClick={() => navigate('/orders')}
-                className="mr-4 text-gray-500 hover:text-gray-700"
+                className="mr-4 text-gray-700 hover:text-gray-900"
               >
                 <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
                   <path fillRule="evenodd" d="M9.707 14.707a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414l4-4a1 1 0 011.414 1.414L7.414 9H15a1 1 0 110 2H7.414l2.293 2.293a1 1 0 010 1.414z" clipRule="evenodd" />
@@ -95,7 +95,7 @@ export default function OrderDetail() {
               </button>
               <h1 className="text-2xl font-bold text-gray-900">Order Details</h1>
             </div>
-            {orderId && <p className="mt-1 text-sm text-gray-600">Order #{orderId}</p>}
+            {orderId && <p className="mt-1 text-sm font-bold text-gray-500">Order #{orderId}</p>}
           </div>
         </div>
 
@@ -122,32 +122,32 @@ export default function OrderDetail() {
             <div className="p-6 border-b border-gray-200">
               <div className="flex justify-between items-start">
                 <div>
-                  <h2 className="text-lg font-medium text-gray-900">Order Summary</h2>
-                  <p className="mt-1 text-sm text-gray-600">
+                  <h2 className="text-lg font-bold text-gray-900">Order Summary</h2>
+                  <p className="mt-1 text-sm font-bold text-gray-900">
                     Order #{order.id}
                   </p>
                 </div>
-                <span className={`px-3 py-1 inline-flex text-sm leading-5 font-medium rounded-full border ${getStatusBadgeClass(order.status)}`}>
-                  {order.status}
+                <span className={`px-3 py-1 inline-flex text-sm leading-5 font-bold rounded-full border ${getStatusBadgeClass(order.status)}`}>
+                  {order.formatted_status || order.status}
                 </span>
               </div>
             </div>
             
             <div className="px-6 py-4 border-b border-gray-200">
-              <h3 className="text-base font-medium text-gray-900 mb-3">Items</h3>
+              <h3 className="text-base font-bold text-gray-900 mb-3">Order Items</h3>
               <div className="space-y-3">
                 {order.items.map((item, index) => (
                   <div key={index} className="flex justify-between items-center py-2 border-b border-gray-100 last:border-0">
                     <div className="flex items-start">
                       <div className="flex-shrink-0 w-10 h-10 bg-gray-200 rounded flex items-center justify-center mr-3">
-                        <span className="text-gray-500 text-xs">{item.quantity}</span>
+                        <span className="text-gray-900 font-bold text-xs">{item.quantity}</span>
                       </div>
                       <div>
-                        <p className="text-sm font-medium text-gray-900">{item.product_name}</p>
-                        <p className="text-sm text-gray-500">{formatPrice(item.price)}</p>
+                        <p className="text-sm font-bold text-gray-900">{item.product_name}</p>
+                        <p className="text-sm font-semibold text-gray-800">{formatPrice(item.price)}</p>
                       </div>
                     </div>
-                    <div className="text-sm font-medium text-gray-900">
+                    <div className="text-sm font-bold text-gray-900">
                       {formatPrice(item.price * item.quantity)}
                     </div>
                   </div>
@@ -155,18 +155,45 @@ export default function OrderDetail() {
               </div>
             </div>
             
+            {/* Shipping Address Section */}
+            {order.shipping_address && (
+              <div className="px-6 py-4 border-b border-gray-200">
+                <h3 className="text-base font-bold text-gray-900 mb-3">Shipping Address</h3>
+                <p className="text-sm font-bold text-gray-900">
+                  {order.shipping_address}
+                </p>
+              </div>
+            )}
+
+            {/* Payment Details Section */}
+            <div className="px-6 py-4 border-b border-gray-200">
+              <h3 className="text-base font-bold text-gray-900 mb-3">Payment Details</h3>
+              <div className="space-y-2">
+                <p className="text-sm font-bold text-gray-900">
+                  Payment Method: 
+                  <span className="ml-2 font-bold text-gray-900">{order.payment_method}</span>
+                </p>
+                {order.payment_id && (
+                  <p className="text-sm font-bold text-gray-900">
+                    Transaction ID: 
+                    <span className="ml-2 font-bold text-gray-900">{order.payment_id}</span>
+                  </p>
+                )}
+              </div>
+            </div>
+            
             <div className="px-6 py-4">
               <div className="flex justify-between mb-2">
-                <span className="text-sm text-gray-600">Subtotal</span>
-                <span className="text-sm font-medium text-gray-900">{formatPrice(order.total_price)}</span>
+                <span className="text-sm font-bold text-gray-900">Subtotal</span>
+                <span className="text-sm font-bold text-gray-900">{formatPrice(order.total_price)}</span>
               </div>
               <div className="flex justify-between mb-2">
-                <span className="text-sm text-gray-600">Shipping</span>
-                <span className="text-sm font-medium text-gray-900">Free</span>
+                <span className="text-sm font-bold text-gray-900">Shipping</span>
+                <span className="text-sm font-bold text-gray-900">Free</span>
               </div>
               <div className="flex justify-between pt-4 border-t border-gray-200">
-                <span className="text-base font-medium text-gray-900">Total</span>
-                <span className="text-base font-medium text-gray-900">{formatPrice(order.total_price)}</span>
+                <span className="text-base font-bold text-gray-900">Total</span>
+                <span className="text-base font-bold text-gray-900">{formatPrice(order.total_price)}</span>
               </div>
             </div>
             
@@ -174,13 +201,13 @@ export default function OrderDetail() {
               <div className="flex justify-between">
                 <Link
                   to="/orders"
-                  className="inline-flex items-center px-3 py-2 border border-gray-300 shadow-sm text-sm leading-4 font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary"
+                  className="inline-flex items-center px-3 py-2 border border-gray-400 shadow-sm text-sm leading-4 font-bold rounded-md text-gray-900 bg-white hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary"
                 >
                   Back to Orders
                 </Link>
                 <Link
                   to="/"
-                  className="inline-flex items-center px-3 py-2 border border-transparent text-sm leading-4 font-medium rounded-md shadow-sm text-white bg-primary hover:bg-primary-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary"
+                  className="inline-flex items-center px-3 py-2 border border-transparent text-sm leading-4 font-bold rounded-md shadow-sm text-white bg-primary hover:bg-primary-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary"
                 >
                   Continue Shopping
                 </Link>
@@ -189,7 +216,7 @@ export default function OrderDetail() {
           </div>
         ) : (
           <div className="bg-white shadow-md rounded-lg p-6 text-center">
-            <p className="text-gray-600">No order information available.</p>
+            <p className="text-sm font-bold text-gray-900">No order information available.</p>
           </div>
         )}
       </div>

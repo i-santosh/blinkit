@@ -4,6 +4,9 @@ from rest_framework import status
 from rest_framework.permissions import IsAuthenticated
 from django.db import transaction
 from django.conf import settings
+from rest_framework.generics import ListAPIView, RetrieveAPIView
+from django.db.models import Q
+from rest_framework import filters
 
 from constants import RAZORPAY_KEY_ID, RAZORPAY_KEY_SECRET
 from .models import Order, OrderItem
@@ -17,7 +20,6 @@ class OrderCreateAPIView(CoreAPIView):
     permission_classes = [IsAuthenticated]
     
     def post(self, request, format=None):
-        payment_method = request.data.get('payment_method', 'COD')
         serializer = OrderCreateSerializer(
             data=request.data, 
             context={'request': request}
@@ -27,6 +29,9 @@ class OrderCreateAPIView(CoreAPIView):
             try:
                 # Use transaction to ensure atomicity
                 with transaction.atomic():
+                    # Get payment method from request data
+                    payment_method = request.data.get('payment_method', 'COD')
+                    
                     # Create order in database but within a transaction
                     order = serializer.save()
                     
@@ -156,3 +161,142 @@ class VerifyPaymentView(CoreAPIView):
                 errors=str(e),
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR
             )
+
+class OrderListAPIView(CoreAPIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        # Get all orders (this might need to be restricted based on user role)
+        orders = Order.objects.all().order_by('-created_at')
+        
+        # Serialize the orders
+        serializer = OrderSerializer(orders, many=True)
+        
+        # Use generate_api_response for consistent API response
+        return generate_api_response(
+            success=True,
+            message="Orders retrieved successfully",
+            code=SC.REQ_DATA_RETRIEVED.value,
+            data=serializer.data,
+            status_code=status.HTTP_200_OK
+        )
+
+class OrderDetailAPIView(CoreAPIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request, order_id):
+        try:
+            # Get the specific order
+            order = Order.objects.get(id=order_id)
+            
+            # Serialize the order
+            serializer = OrderSerializer(order)
+            
+            # Use generate_api_response for consistent API response
+            return generate_api_response(
+                success=True,
+                message="Order details retrieved successfully",
+                code=SC.REQ_DATA_RETRIEVED.value,
+                data=serializer.data,
+                status_code=status.HTTP_200_OK
+            )
+        except Order.DoesNotExist:
+            # Use generate_api_response for not found scenario
+            return generate_api_response(
+                success=False,
+                message="Order not found",
+                code=EC.RES_NOT_FOUND.value,
+                status_code=status.HTTP_404_NOT_FOUND
+            )
+
+    def post(self, request, order_id):
+        try:
+            # Get the specific order
+            order = Order.objects.get(id=order_id, user=request.user)
+            
+            # Check if order can be cancelled
+            if order.status not in ['PENDING', 'PROCESSING']:
+                return generate_api_response(
+                    success=False,
+                    message="Order cannot be cancelled at this stage.",
+                    code=EC.RES_CONFLICT.value,
+                    status_code=status.HTTP_400_BAD_REQUEST
+                )
+            
+            # Initialize refund variables
+            refund_response = None
+            
+            # Check if the order was paid online and has a payment ID
+            if order.payment_id and order.razorpay_order_id:
+                try:
+                    # Initialize Razorpay client
+                    client = razorpay.Client(auth=(RAZORPAY_KEY_ID, RAZORPAY_KEY_SECRET))
+                    
+                    # Prepare refund data
+                    refund_data = {
+                        "payment_id": order.payment_id,
+                        "amount": int(order.total_price * 100),  # Convert to paise
+                        "speed": "normal"
+                    }
+                    
+                    # Process refund
+                    refund_response = client.payment.refund(order.payment_id, refund_data)
+                    
+                    # Log refund details
+                    print(f"Razorpay Refund Response: {refund_response}")
+                except Exception as refund_error:
+                    # Log the refund error but continue with order cancellation
+                    print(f"Refund Error: {refund_error}")
+            
+            # Update order status to CANCELLED
+            order.status = 'CANCELLED'
+            order.save()
+            
+            # Serialize the updated order
+            serializer = OrderSerializer(order)
+            
+            # Prepare response data
+            response_data = serializer.data
+            
+            # Explicitly add refund details if available
+            if refund_response:
+                response_data['refund_details'] = {
+                    'refund_id': refund_response.get('id', order.payment_id),
+                    'status': refund_response.get('status', 'processed')
+                }
+            
+            # Use generate_api_response for consistent API response
+            return generate_api_response(
+                success=True,
+                message="Order cancelled successfully",
+                code=SC.UPD_RESOURCE_MODIFIED.value,
+                data=response_data,
+                status_code=status.HTTP_200_OK
+            )
+        except Order.DoesNotExist:
+            # Use generate_api_response for not found scenario
+            return generate_api_response(
+                success=False,
+                message="Order not found",
+                code=EC.RES_NOT_FOUND.value,
+                status_code=status.HTTP_404_NOT_FOUND
+            )
+
+class MyOrdersListAPIView(CoreAPIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        # Get orders for the current authenticated user, ordered by most recent first
+        orders = Order.objects.filter(user=request.user).order_by('-created_at')
+        
+        # Serialize the orders
+        serializer = OrderSerializer(orders, many=True)
+        
+        # Use generate_api_response for consistent API response
+        return generate_api_response(
+            success=True,
+            message="User orders retrieved successfully",
+            code=SC.REQ_DATA_RETRIEVED.value,
+            data=serializer.data,
+            status_code=status.HTTP_200_OK
+        )

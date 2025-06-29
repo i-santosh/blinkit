@@ -13,67 +13,71 @@ type LoaderData = {
   products: Product[];
   categories: Category[];
   currentCategory: Category | null;
+  searchQuery?: string | null;
   error?: string;
 };
 
 export async function loader({ request }: LoaderFunctionArgs) {
   const url = new URL(request.url);
   const categoryParam = url.searchParams.get("category");
-  
-  console.log("Loading products for category param:", categoryParam);
-  
+  const searchParam = url.searchParams.get("search");
+
+  console.log("Loading products for category:", categoryParam, "and search:", searchParam);
+
   try {
-    // Fetch categories
+    // Fetch categories regardless
     const categoriesResponse = await productsAPI.getCategories();
     let categories: Category[] = [];
-    
     if (categoriesResponse.success && categoriesResponse.data) {
       categories = categoriesResponse.data;
     }
-    
-    // Debug category formatting
-    if (categoryParam && categories.length > 0) {
-      console.log("Checking category matches...");
-      categories.forEach(cat => {
-        const formattedName = formatCategoryNameForUrl(cat.name);
-        console.log(`Category "${cat.name}" → "${formattedName}" matches: ${formattedName === categoryParam}`);
-      });
-    }
-    
-    // Fetch products filtered by category if provided
-    const productsResponse = await productsAPI.getProducts(
-      undefined, // page
-      undefined, // search
-      categoryParam || undefined // category
-    );
-    
+
     let products: Product[] = [];
-    if (productsResponse.success) {
-      if (Array.isArray(productsResponse.data)) {
+    let productsResponse;
+
+    if (searchParam) {
+      // Use searchProducts if a search query is present
+      productsResponse = await productsAPI.searchProducts(searchParam);
+      if (productsResponse.success && Array.isArray(productsResponse.data)) {
         products = productsResponse.data;
-      } else if (productsResponse.data.results) {
-        products = productsResponse.data.results;
+      }
+    } else {
+      // Otherwise, use getProducts for category filtering
+      productsResponse = await productsAPI.getProducts(
+        undefined, // page
+        undefined, // search (not used here)
+        categoryParam || undefined // category
+      );
+      if (productsResponse.success) {
+        if (productsResponse.data && Array.isArray(productsResponse.data.results)) {
+          products = productsResponse.data.results;
+        } else if (Array.isArray(productsResponse.data)) {
+          // Fallback if the structure is flat
+          products = productsResponse.data;
+        }
       }
     }
-    
-    // Find current category object using the same formatting logic
-    const currentCategory = categoryParam 
+
+    // Find current category object
+    const currentCategory = categoryParam
       ? categories.find(cat => formatCategoryNameForUrl(cat.name) === categoryParam) || null
       : null;
-    
+
     console.log("Found current category:", currentCategory?.name || 'None');
-    
-    return json<LoaderData>({ 
+
+    return json<LoaderData>({
       products,
       categories,
-      currentCategory
+      currentCategory,
+      searchQuery: searchParam
     });
   } catch (error) {
     console.error("Error loading products:", error);
-    return json<LoaderData>({ 
+    return json<LoaderData>({
       products: [],
       categories: [],
       currentCategory: null,
+      searchQuery: searchParam,
       error: "Failed to load products. Please try again later."
     });
   }
@@ -99,7 +103,7 @@ const formatUrlToDisplayName = (urlName: string): string => {
 };
 
 export default function Products() {
-  const loaderData = useLoaderData<typeof loader>();
+  const { products, categories, currentCategory, searchQuery, error } = useLoaderData<typeof loader>();
   const [searchParams] = useSearchParams();
   const location = useLocation();
   const fetcher = useFetcher<typeof loader>();
@@ -110,33 +114,18 @@ export default function Products() {
   // When the URL changes, fetch new data
   useEffect(() => {
     // Skip if URL hasn't changed
-    if (prevSearchRef.current === location.search) {
+    if (location.search === prevSearchRef.current) {
       return;
     }
-    
-    // Debug logging for category parameter
-    const params = new URLSearchParams(location.search);
-    const categoryParam = params.get('category');
-    console.log('URL category parameter:', categoryParam);
-    
-    if (categoryParam && loaderData.categories) {
-      // Debug each category formatting to find matching issues
-      loaderData.categories.forEach(cat => {
-        const formatted = formatCategoryNameForUrl(cat.name);
-        console.log(`Category "${cat.name}" formatted as "${formatted}", matches: ${formatted === categoryParam}`);
-      });
-    }
-    
-    // Update our ref to the current search
     prevSearchRef.current = location.search;
-    
-    // Use fetcher to load data without navigation
-    fetcher.load(`${location.pathname}${location.search}`);
-  }, [location.search, location.pathname, fetcher, loaderData.categories]);
-  
-  // Get data either from fetcher (if available) or from initial loader
-  const data: LoaderData = fetcher.data || loaderData;
-  
+
+    // Use fetcher to load new data without a full page reload
+    fetcher.load(location.pathname + location.search);
+  }, [location.search, fetcher]);
+
+  // Use fetcher data if available, otherwise use initial loader data
+  const data = fetcher.data || { products, categories, currentCategory, searchQuery, error };
+
   // Get category name for display
   const categoryName = data.currentCategory?.name || 
     (searchParams.get("category") ? formatUrlToDisplayName(searchParams.get("category") || "") : "All Products");
@@ -164,13 +153,21 @@ export default function Products() {
 
   return (
     <Layout>
-      <div className="container mx-auto px-4 py-8">
+      <div className="container mx-auto px-4 py-8 space-y-8">
         <div className="mb-8">
-          <h1 className="text-3xl font-bold text-black mb-2">{categoryName}</h1>
+          <h1 className="text-3xl font-bold text-black mb-2">
+            {data.searchQuery
+              ? `Showing results for "${data.searchQuery}"`
+              : data.currentCategory
+              ? data.currentCategory.name
+              : "All Products"}
+          </h1>
           <p className="text-gray-600">
-            {!data.currentCategory 
+            {data.searchQuery
+              ? `Browse products matching your search.`
+              : !data.currentCategory
               ? "Browse our complete range of fresh groceries."
-              : `Browse our selection of ${categoryName.toLowerCase()}.`}
+              : `Browse our selection of ${data.currentCategory.name.toLowerCase()}.`}
           </p>
         </div>
         
@@ -272,7 +269,11 @@ export default function Products() {
           </div>
         ) : (
           <div className="text-center py-12">
-            <p className="text-lg text-gray-600">No products found in this category.</p>
+            <p className="text-lg text-gray-600">
+              {data.searchQuery
+                ? `No products found for "${data.searchQuery}".`
+                : "No products found in this category."}
+            </p>
             <Link to="/products" className="text-primary font-medium mt-4 inline-block hover:underline">
               View all products
             </Link>
@@ -281,4 +282,4 @@ export default function Products() {
       </div>
     </Layout>
   );
-} 
+}

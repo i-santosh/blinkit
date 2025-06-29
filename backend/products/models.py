@@ -7,6 +7,7 @@ class Category(models.Model):
     name = models.CharField(max_length=255)
     thumbnail = models.FileField(upload_to='thumbnails/', blank=True, null=True)
     description = models.TextField(blank=True, null=True)
+    is_active = models.BooleanField(default=True)
 
     def __str__(self):
         return self.name
@@ -23,6 +24,7 @@ class Product(models.Model):
     tag = models.CharField(max_length=50, default='new_arrivals', choices=[('new_arrivals', 'New Arrivals'),
                                                                   ('trending', 'Trending'),
                                                                   ('top_rated', 'Top Rated')])
+    is_active = models.BooleanField(default=True)
 
     def __str__(self):
         return self.name

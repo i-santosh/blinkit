@@ -16,4 +16,4 @@ class ContactMessageAdmin(admin.ModelAdmin):
         queryset.update(is_read=False)
     mark_as_unread.short_description = "Mark selected messages as unread"
     
-    actions = [mark_as_read, mark_as_unread] 
+    actions = [mark_as_read, mark_as_unread]
