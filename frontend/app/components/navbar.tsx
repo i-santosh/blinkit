@@ -1,11 +1,119 @@
 import { Link, useNavigate } from "@remix-run/react";
-import { Search, User, MapPin, LogIn, ChevronDown, LogOut } from "lucide-react";
+import { Search, User, MapPin, LogIn, ChevronDown, LogOut, X } from "lucide-react";
 import { CartButton } from "./cart-button";
 import { useState, useEffect } from "react";
 import apiClient from "~/lib/client-axios";
 import useUserProfileStore from "~/store/userProfileStore";
 import { getAccessTokenCookie } from "../../utils/token/get-token";
 import { clearTokens } from "../../utils/token/get-token";
+import { deliveryAreasAPI } from '~/lib/api';
+import { useClientOnly } from '~/utils/useClientOnly';
+
+interface Pincode {
+  id: number;
+  pincode: string;
+}
+
+export function PincodeSelector() {
+  const ClientOnly = useClientOnly();
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [pincodes, setPincodes] = useState<Pincode[]>([]);
+  const [selectedPincode, setSelectedPincode] = useState<string | null>(null);
+
+  useEffect(() => {
+    const fetchPincodes = async () => {
+      const fetchedPincodes = await deliveryAreasAPI.getPincodes();
+      setPincodes(fetchedPincodes);
+    };
+
+    fetchPincodes();
+  }, []);
+
+  // Client-side effect for localStorage
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const storedPincode = localStorage.getItem('selectedPincode');
+      if (storedPincode) {
+        setSelectedPincode(storedPincode);
+      }
+    }
+  }, []);
+
+  const handlePincodeSelect = (pincode: string) => {
+    if (typeof window !== 'undefined') {
+      setSelectedPincode(pincode);
+      localStorage.setItem('selectedPincode', pincode);
+      setIsModalOpen(false);
+    }
+  };
+
+  return (
+    <ClientOnly fallback={
+      <button className="hidden md:flex items-center text-sm font-medium gap-1 hover:text-primary transition-colors text-gray-800 bg-gray-50 px-3 py-1.5 rounded-md border border-gray-200">
+        <MapPin size={18} className="text-primary" />
+        <span className="font-medium">Deliver to: </span>
+        <span className="font-bold underline">Select Pincode</span>
+        <ChevronDown size={14} className="ml-1" />
+      </button>
+    }>
+      {/* Location Button */}
+      <button 
+        onClick={() => setIsModalOpen(true)}
+        className="hidden md:flex items-center text-sm font-medium gap-1 hover:text-primary transition-colors text-gray-800 bg-gray-50 px-3 py-1.5 rounded-md border border-gray-200"
+      >
+        <MapPin size={18} className="text-primary" />
+        <span className="font-medium">Deliver to: </span>
+        <span className="font-bold underline">
+          {selectedPincode ? `Pincode ${selectedPincode}` : 'Select Pincode'}
+        </span>
+        <ChevronDown size={14} className="ml-1" />
+      </button>
+
+      {/* Pincode Selection Modal */}
+      {isModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50 p-4">
+          <div className="bg-white rounded-lg p-6 w-full max-w-md max-h-[80vh] overflow-y-auto shadow-2xl">
+            {/* Modal Header */}
+            <div className="flex justify-between items-center mb-6">
+              <h5 className="text-xl font-bold text-gray-900"> Select from our Delivery Areas Pincodes</h5>
+              <button 
+                onClick={() => setIsModalOpen(false)}
+                className="text-gray-600 hover:text-gray-900 transition-colors"
+              >
+                <X size={24} />
+              </button>
+            </div>
+
+            {/* Pincode List */}
+            <div className="grid grid-cols-3 gap-3">
+              {pincodes.map((pincode) => (
+                <button
+                  key={pincode.id}
+                  onClick={() => handlePincodeSelect(pincode.pincode)}
+                  className={`
+                    p-3 rounded-lg border-2 text-sm font-semibold transition-all duration-200 ease-in-out
+                    ${selectedPincode === pincode.pincode 
+                      ? 'bg-primary text-white border-primary shadow-md' 
+                      : 'bg-gray-100 text-gray-800 border-gray-300 hover:bg-gray-200 hover:border-primary'}
+                  `}
+                >
+                  {pincode.pincode}
+                </button>
+              ))}
+            </div>
+
+            {/* Empty State */}
+            {pincodes.length === 0 && (
+              <p className="text-center text-gray-500 mt-6 text-sm">
+                No serviceable pincodes available at the moment
+              </p>
+            )}
+          </div>
+        </div>
+      )}
+    </ClientOnly>
+  );
+}
 
 export function Navbar() {
   const [isNavOpen, setIsNavOpen] = useState(false);
@@ -71,12 +179,7 @@ export function Navbar() {
           </div>
           
           {/* Location */}
-          <button className="hidden md:flex items-center text-sm font-medium gap-1 hover:text-primary transition-colors text-gray-800 bg-gray-50 px-3 py-1.5 rounded-md border border-gray-200">
-            <MapPin size={18} className="text-primary" />
-            <span className="font-medium">Deliver to: </span>
-            <span className="font-bold underline">Mumbai 400001</span>
-            <ChevronDown size={14} className="ml-1" />
-          </button>
+          <PincodeSelector />
           
           {/* Search */}
           <div className="hidden md:flex flex-1 max-w-md mx-6 relative">
@@ -198,16 +301,6 @@ export function Navbar() {
             onKeyDown={handleSearch}
           />
         </div>
-      </div>
-      
-      {/* Mobile Location */}
-      <div className="block md:hidden px-4 pb-3">
-        <button className="flex items-center w-full text-sm font-medium gap-1 hover:text-primary transition-colors text-gray-800 bg-gray-50 px-3 py-1.5 rounded-md border border-gray-200">
-          <MapPin size={18} className="text-primary" />
-          <span className="font-medium">Deliver to: </span>
-          <span className="font-bold underline">Mumbai 400001</span>
-          <ChevronDown size={14} className="ml-1" />
-        </button>
       </div>
     </header>
   );

@@ -1,103 +1,72 @@
-from rest_framework import viewsets, permissions, status
-from rest_framework.decorators import action
-from rest_framework.response import Response
+from rest_framework import permissions, generics
+from rest_framework import status
 
 from core.views import CoreAPIView
 from core.success_codes import SuccessCodes as SC
 from core.error_codes import ErrorCodes as EC
+from utils.response import generate_api_response
 
-from .models import DeliveryArea
-from .serializers import (
-    DeliveryAreaSerializer, 
-    DeliveryAreaListSerializer, 
-    DeliveryAreaCreateUpdateSerializer
-)
+from .models import Pincode
+from .serializers import PincodeSerializer
 
-class DeliveryAreaViewSet(viewsets.ModelViewSet):
+class PincodeListView(generics.ListAPIView):
     """
-    ViewSet for managing delivery areas
+    A view to list all serviceable pincodes
     """
-    queryset = DeliveryArea.objects.all()
-    permission_classes = [permissions.IsAdminUser]
-    
-    def get_serializer_class(self):
+    queryset = Pincode.objects.all()
+    serializer_class = PincodeSerializer
+    permission_classes = [permissions.AllowAny]
+
+    def list(self, request, *args, **kwargs):
         """
-        Return different serializers based on the action
+        List all serviceable pincodes
         """
-        if self.action == 'list':
-            return DeliveryAreaListSerializer
-        elif self.action in ['create', 'update', 'partial_update']:
-            return DeliveryAreaCreateUpdateSerializer
-        return DeliveryAreaSerializer
-    
-    def create(self, request, *args, **kwargs):
-        """
-        Custom create method with enhanced response
-        """
-        serializer = self.get_serializer(data=request.data)
-        serializer.is_valid(raise_exception=True)
-        self.perform_create(serializer)
+        queryset = self.filter_queryset(self.get_queryset())
+        serializer = self.get_serializer(queryset, many=True)
         
-        return Response(
-            {
-                'success': True,
-                'message': 'Delivery area created successfully',
-                'code': SC.CRE_RESOURCE_CREATED.value,
-                'data': DeliveryAreaSerializer(serializer.instance).data
-            },
-            status=status.HTTP_201_CREATED
+        return generate_api_response(
+            success=True,
+            message="Serviceable pincodes retrieved successfully",
+            code=SC.REQ_DATA_RETRIEVED.value,
+            data=serializer.data,
+            status_code=status.HTTP_200_OK
         )
-    
-    def update(self, request, *args, **kwargs):
+
+class PincodeCheckView(CoreAPIView):
+    """
+    A view to check if a pincode is serviceable
+    """
+    permission_classes = [permissions.AllowAny]
+
+    def get(self, request):
         """
-        Custom update method with enhanced response
+        Check if a pincode is serviceable
         """
-        partial = kwargs.pop('partial', False)
-        instance = self.get_object()
-        serializer = self.get_serializer(instance, data=request.data, partial=partial)
-        serializer.is_valid(raise_exception=True)
-        self.perform_update(serializer)
+        pincode = request.query_params.get('pincode', None)
         
-        return Response(
-            {
-                'success': True,
-                'message': 'Delivery area updated successfully',
-                'code': SC.UPD_RESOURCE_MODIFIED.value,
-                'data': DeliveryAreaSerializer(serializer.instance).data
-            },
-            status=status.HTTP_200_OK
-        )
-    
-    def destroy(self, request, *args, **kwargs):
-        """
-        Custom destroy method with enhanced response
-        """
-        instance = self.get_object()
-        self.perform_destroy(instance)
+        if not pincode:
+            return generate_api_response(
+                success=False,
+                message="Pincode is required",
+                code=EC.VAL_MISSING_FIELD.value,
+                status_code=status.HTTP_400_BAD_REQUEST
+            )
         
-        return Response(
-            {
-                'success': True,
-                'message': 'Delivery area deleted successfully',
-                'code': SC.DEL_RESOURCE_REMOVED.value
-            },
-            status=status.HTTP_200_OK
-        )
-    
-    @action(detail=False, methods=['GET'], permission_classes=[permissions.AllowAny])
-    def active_areas(self, request):
-        """
-        Get all active delivery areas
-        """
-        active_areas = DeliveryArea.get_active_areas()
-        serializer = DeliveryAreaListSerializer(active_areas, many=True)
-        
-        return Response(
-            {
-                'success': True,
-                'message': 'Active delivery areas retrieved successfully',
-                'code': SC.REQ_DATA_RETRIEVED.value,
-                'data': serializer.data
-            },
-            status=status.HTTP_200_OK
-        ) 
+        try:
+            # Check if pincode exists
+            Pincode.objects.get(pincode=pincode)
+            return generate_api_response(
+                success=True,
+                message="Pincode is serviceable",
+                code=SC.REQ_DATA_RETRIEVED.value,
+                data={'serviceable': True},
+                status_code=status.HTTP_200_OK
+            )
+        except Pincode.DoesNotExist:
+            return generate_api_response(
+                success=False,
+                message="Pincode is not serviceable",
+                code=EC.RES_NOT_FOUND.value,
+                data={'serviceable': False},
+                status_code=status.HTTP_404_NOT_FOUND
+            )

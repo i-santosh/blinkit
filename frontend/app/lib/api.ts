@@ -369,5 +369,27 @@ export const deliveryAreasAPI = {
       console.error('Error deleting delivery area:', error.response?.data || error.message);
       return error.response?.data || { success: false, message: 'An unknown error occurred' };
     }
+  },
+
+  // Fetch list of serviceable pincodes
+  getPincodes: async () => {
+    try {
+      const response = await apiClient.get('/addresses/pincodes/');
+      return response.data.data;
+    } catch (error) {
+      console.error('Error fetching pincodes:', error);
+      return [];
+    }
+  },
+
+  // Check if a specific pincode is serviceable
+  checkPincode: async (pincode: string) => {
+    try {
+      const response = await apiClient.get(`/addresses/check-pincode/?pincode=${pincode}`);
+      return response.data.data.serviceable;
+    } catch (error) {
+      console.error('Error checking pincode:', error);
+      return false;
+    }
   }
 };

@@ -51,7 +51,7 @@ export default function OrderDetail() {
   useEffect(() => {
     const fetchOrderDetails = async () => {
       if (!orderId) return;
-      
+
       try {
         setLoading(true);
         const response = await ordersAPI.getOrderDetails(orderId);
@@ -173,7 +173,7 @@ export default function OrderDetail() {
           <div className="p-6 border-b border-gray-200">
             <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4">
               <div>
-                <h1 className="text-2xl font-bold mb-1 text-black !text-black" style={{color: '#000 !important'}}>Order #{order.id}</h1>
+                <h1 className="text-2xl font-bold mb-1 text-black " style={{ color: '#000 !important' }}>Order #{order.id}</h1>
                 <p className="text-sm text-gray-600 flex items-center">
                   <Clock size={14} className="mr-1" />
                   Placed on {formatDate(order.created_at)}
@@ -186,16 +186,15 @@ export default function OrderDetail() {
                   </span>
                 ) : (
                   <>
-                    <span className={`px-3 py-1 text-sm font-medium rounded-full ${
-                      order.status === 'DELIVERED' ? 'bg-green-100 text-green-800' :
-                      order.status === 'SHIPPED' ? 'bg-indigo-100 text-indigo-800' :
-                      order.status === 'PROCESSING' ? 'bg-blue-100 text-blue-800' :
-                      'bg-yellow-100 text-yellow-800'
-                    }`}>
+                    <span className={`px-3 py-1 text-sm font-medium rounded-full ${order.status === 'DELIVERED' ? 'bg-green-100 text-green-800' :
+                        order.status === 'SHIPPED' ? 'bg-indigo-100 text-indigo-800' :
+                          order.status === 'PROCESSING' ? 'bg-blue-100 text-blue-800' :
+                            'bg-yellow-100 text-yellow-800'
+                      }`}>
                       {order.status}
                     </span>
                     {(order.status === 'PENDING' || order.status === 'PROCESSING') && (
-                      <button 
+                      <button
                         onClick={handleCancelOrder}
                         disabled={isCancelling}
                         className="flex items-center px-3 py-1 text-sm font-medium rounded-full bg-red-100 text-red-800 hover:bg-red-200 transition-colors disabled:opacity-50"
@@ -221,52 +220,48 @@ export default function OrderDetail() {
 
           {order.status !== 'CANCELLED' && (
             <div className="p-6 border-b border-gray-200 bg-gray-50">
-              <h2 className="text-lg font-semibold mb-4 text-black !text-black" style={{color: '#000 !important'}}>Order Status</h2>
+              <h2 className="text-lg font-semibold mb-4 text-black " style={{ color: '#000 !important' }}>Order Status</h2>
               <div className="relative">
                 {/* Progress bar */}
                 <div className="h-1 bg-gray-200 absolute top-5 left-0 right-0 z-0">
-                  <div 
-                    className="h-1 bg-primary transition-all duration-500" 
+                  <div
+                    className="h-1 bg-primary transition-all duration-500"
                     style={{ width: `${(statusStep - 1) * 33.33}%` }}
                   ></div>
                 </div>
-                
+
                 {/* Status steps */}
                 <div className="flex justify-between relative z-10">
                   <div className="flex flex-col items-center">
-                    <div className={`w-10 h-10 rounded-full flex items-center justify-center ${
-                      statusStep >= 1 ? 'bg-primary text-white' : 'bg-gray-200 text-gray-500'
-                    }`}>
+                    <div className={`w-10 h-10 rounded-full flex items-center justify-center ${statusStep >= 1 ? 'bg-primary text-white' : 'bg-gray-200 text-gray-500'
+                      }`}>
                       <ShoppingBag size={20} />
                     </div>
-                    <span className="mt-2 text-sm font-medium text-black !text-black" style={{color: '#000 !important'}}>Confirmed</span>
+                    <span className="mt-2 text-sm font-medium text-black " style={{ color: '#000 !important' }}>Confirmed</span>
                   </div>
-                  
+
                   <div className="flex flex-col items-center">
-                    <div className={`w-10 h-10 rounded-full flex items-center justify-center ${
-                      statusStep >= 2 ? 'bg-primary text-white' : 'bg-gray-200 text-gray-500'
-                    }`}>
+                    <div className={`w-10 h-10 rounded-full flex items-center justify-center ${statusStep >= 2 ? 'bg-primary text-white' : 'bg-gray-200 text-gray-500'
+                      }`}>
                       <Loader2 size={20} />
                     </div>
-                    <span className="mt-2 text-sm font-medium text-black !text-black" style={{color: '#000 !important'}}>Processing</span>
+                    <span className="mt-2 text-sm font-medium text-black " style={{ color: '#000 !important' }}>Processing</span>
                   </div>
-                  
+
                   <div className="flex flex-col items-center">
-                    <div className={`w-10 h-10 rounded-full flex items-center justify-center ${
-                      statusStep >= 3 ? 'bg-primary text-white' : 'bg-gray-200 text-gray-500'
-                    }`}>
+                    <div className={`w-10 h-10 rounded-full flex items-center justify-center ${statusStep >= 3 ? 'bg-primary text-white' : 'bg-gray-200 text-gray-500'
+                      }`}>
                       <Truck size={20} />
                     </div>
-                    <span className="mt-2 text-sm font-medium text-black !text-black" style={{color: '#000 !important'}}>Shipped</span>
+                    <span className="mt-2 text-sm font-medium text-black " style={{ color: '#000 !important' }}>Shipped</span>
                   </div>
-                  
+
                   <div className="flex flex-col items-center">
-                    <div className={`w-10 h-10 rounded-full flex items-center justify-center ${
-                      statusStep >= 4 ? 'bg-primary text-white' : 'bg-gray-200 text-gray-500'
-                    }`}>
+                    <div className={`w-10 h-10 rounded-full flex items-center justify-center ${statusStep >= 4 ? 'bg-primary text-white' : 'bg-gray-200 text-gray-500'
+                      }`}>
                       <CheckCircle size={20} />
                     </div>
-                    <span className="mt-2 text-sm font-medium text-black !text-black" style={{color: '#000 !important'}}>Delivered</span>
+                    <span className="mt-2 text-sm font-medium text-black " style={{ color: '#000 !important' }}>Delivered</span>
                   </div>
                 </div>
               </div>
@@ -274,7 +269,7 @@ export default function OrderDetail() {
           )}
 
           <div className="p-6 border-b border-gray-200">
-            <h2 className="text-lg font-semibold mb-4 text-black !text-black" style={{color: '#000 !important'}}>Order Items</h2>
+            <h2 className="text-lg font-semibold mb-4 text-black " style={{ color: '#000 !important' }}>Order Items</h2>
             <div className="overflow-x-auto">
               <table className="min-w-full divide-y divide-gray-200">
                 <thead className="bg-gray-50">
@@ -327,7 +322,7 @@ export default function OrderDetail() {
 
           {order.shipping_address && (
             <div className="p-6 border-b border-gray-200">
-              <h2 className="text-lg font-semibold mb-2 flex items-center text-black !text-black" style={{color: '#000 !important'}}>
+              <h2 className="text-lg font-semibold mb-2 flex items-center text-black " style={{ color: '#000 !important' }}>
                 <MapPin size={18} className="mr-2 text-primary" />
                 Shipping Address
               </h2>
@@ -362,9 +357,8 @@ export default function OrderDetail() {
               {order.status === 'CANCELLED' && order.refund_details && (
                 <div className="flex justify-between py-2 border-b border-gray-100">
                   <span className="text-black">Refund Status:</span>
-                  <span className={`font-medium ${
-                    order.refund_details.status === 'processed' ? 'text-green-600' : 'text-yellow-600'
-                  }`}>
+                  <span className={`font-medium ${order.refund_details.status === 'processed' ? 'text-green-600' : 'text-yellow-600'
+                    }`}>
                     {order.refund_details.status === 'processed' ? 'Refunded' : 'Refund Processing'}
                   </span>
                 </div>
